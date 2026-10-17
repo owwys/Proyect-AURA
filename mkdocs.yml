@@ -1,0 +1,11 @@
+site_name: AURA — Documentación técnica
+site_url: https://owwys.github.io/Proyect-AURA/
+repo_url: https://github.com/owwys/Proyect-AURA
+theme:
+  name: material
+  language: es
+nav:
+  - Inicio: index.md
+  - Arquitectura: arquitectura.md
+  - Firmware: firmware.md
+  - Validación: validacion.md
