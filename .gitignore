@@ -1,0 +1,9 @@
+**/wifi_config.py
+**/wifi_settings.json
+**/.DS_Store
+**/*.log
+**/__pycache__/
+**/*.pyc
+.env
+.env.*
+site/
