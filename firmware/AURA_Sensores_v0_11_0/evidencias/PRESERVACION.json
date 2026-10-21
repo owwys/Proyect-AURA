@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-21",
+  "base": "AURA_OTA_v0_10_1/firmware",
+  "new_version": "v0.11.0",
+  "unchanged_modules": [
+    "graphics.py",
+    "setup_http.py",
+    "ili9341.py",
+    "connectivity.py",
+    "config.py",
+    "setup_mode.py",
+    "local_clock.py",
+    "diagnostics.py",
+    "ntp_client.py",
+    "ota_client.py",
+    "tft_layout.py",
+    "widgets.py",
+    "menu.py",
+    "settings.py",
+    "touch.py",
+    "wifi_store.py",
+    "demo.py",
+    "tft_environment.py",
+    "provisioning.py",
+    "font_aura.py",
+    "clock_service.py",
+    "history.py"
+  ],
+  "modified_modules": [
+    "rendering.py",
+    "ui.py",
+    "web_page.py",
+    "local_api.py",
+    "firmware_version.py",
+    "main.py"
+  ],
+  "new_modules": [
+    "bme280_float.py",
+    "sensor_source.py",
+    "scd41.py",
+    "bme280_periodic.py"
+  ],
+  "hardware_tested_this_task": false,
+  "installed_on_device": false,
+  "private_files_accessed": false
+}

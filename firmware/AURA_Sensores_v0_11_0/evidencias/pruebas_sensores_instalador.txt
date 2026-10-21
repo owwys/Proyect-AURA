@@ -1,0 +1,25 @@
+test_changed_base_stops_before_backup (test_installer.InstallTests.test_changed_base_stops_before_backup) ... ok
+test_corrupt_stage_stops_before_backup (test_installer.InstallTests.test_corrupt_stage_stops_before_backup) ... ok
+test_install_backup_and_private_preservation (test_installer.InstallTests.test_install_backup_and_private_preservation) ... ok
+test_pending_ota_stops (test_installer.InstallTests.test_pending_ota_stops) ... ok
+test_write_failure_restores_overwritten_driver (test_installer.InstallTests.test_write_failure_restores_overwritten_driver) ... ok
+test_crc_every_word (test_sensors.SensorTests.test_crc_every_word) ... ok
+test_crc_reference (test_sensors.SensorTests.test_crc_reference) ... ok
+test_waits_do_not_read_early (test_sensors.SensorTests.test_waits_do_not_read_early) ... ok
+test_bosch_vector_and_pressure_units (test_source.BMETests.test_bosch_vector_and_pressure_units) ... ok
+test_busy_conversion_timeout (test_source.BMETests.test_busy_conversion_timeout) ... ok
+test_age_independent_and_ticks_wrap (test_source.SourceTests.test_age_independent_and_ticks_wrap) ... ok
+test_bus_failure_retried (test_source.SourceTests.test_bus_failure_retried) ... ok
+test_error_retries_and_recovers_independently (test_source.SourceTests.test_error_retries_and_recovers_independently) ... ok
+test_no_sensors_no_demo (test_source.SourceTests.test_no_sensors_no_demo) ... ok
+test_priority_fallback_and_staleness (test_source.SourceTests.test_priority_fallback_and_staleness) ... ok
+test_retry_gets_full_warmup_after_old_sample (test_source.SourceTests.test_retry_gets_full_warmup_after_old_sample) ... ok
+
+----------------------------------------------------------------------
+Ran 16 tests in 0.010s
+
+OK
+v0.11.0 files installed and verified. Configuration unchanged.
+Backup: /aura_before_sensors_v0110
+Press RESET/EN. Hardware acceptance tests are still pending.
+Installation cancelled; original program restored. Backup: /aura_before_sensors_v0110

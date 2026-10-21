@@ -1,0 +1,168 @@
+test_draft_clamp_and_cancel (test_clock_editor.EditorTests.test_draft_clamp_and_cancel) ... ok
+test_edit_draft_survives_ntp_and_rtc_failure (test_clock_editor.EditorTests.test_edit_draft_survives_ntp_and_rtc_failure) ... ok
+test_editor_and_menu_fit_and_manual_home_visible (test_clock_editor.EditorTests.test_editor_and_menu_fit_and_manual_home_visible) ... ok
+test_gap_and_fold_choice (test_clock_editor.EditorTests.test_gap_and_fold_choice) ... ok
+test_calendar_validation_and_epoch (test_clock_service.ClockTests.test_calendar_validation_and_epoch) ... ok
+test_gap_and_ambiguous_hour (test_clock_service.ClockTests.test_gap_and_ambiguous_hour) ... ok
+test_local_year_boundary_roundtrip (test_clock_service.ClockTests.test_local_year_boundary_roundtrip) ... ok
+test_manual_valid_without_wifi_and_ntp_transition (test_clock_service.ClockTests.test_manual_valid_without_wifi_and_ntp_transition) ... ok
+test_ntp_failure_preserves_manual_then_success (test_clock_service.ClockTests.test_ntp_failure_preserves_manual_then_success) ... ok
+test_rtc_failure_and_metadata_failure (test_clock_service.ClockTests.test_rtc_failure_and_metadata_failure) ... ok
+test_rtc_metadata_validation (test_clock_service.ClockTests.test_rtc_metadata_validation) ... ok
+test_dst_edges_madrid_and_canary (test_connectivity.CalendarTests.test_dst_edges_madrid_and_canary) ... ok
+test_last_sunday_calendar_and_date_rollover (test_connectivity.CalendarTests.test_last_sunday_calendar_and_date_rollover) ... ok
+test_bad_password_and_ntp_failure_retry (test_connectivity.ConnectivityTests.test_bad_password_and_ntp_failure_retry) ... ok
+test_retry_across_ticks_wrap (test_connectivity.ConnectivityTests.test_retry_across_ticks_wrap) ... ok
+test_wifi_timeout_retry_and_sync (test_connectivity.ConnectivityTests.test_wifi_timeout_retry_and_sync) ... ok
+test_without_credentials_no_connection (test_connectivity.ConnectivityTests.test_without_credentials_no_connection) ... ok
+test_epochs_and_2036_wrap (test_connectivity.NTPTests.test_epochs_and_2036_wrap) ... ok
+test_reject_short_unsynced_wrong_origin_and_stratum (test_connectivity.NTPTests.test_reject_short_unsynced_wrong_origin_and_stratum) ... ok
+test_socket_closed_and_rtc_utc (test_connectivity.NTPTests.test_socket_closed_and_rtc_utc) ... ok
+test_all_scenarios_fit_screen (test_firmware.FirmwareTests.test_all_scenarios_fit_screen) ... ok
+test_arc_gap_symmetry_and_compact_numbers (test_firmware.FirmwareTests.test_arc_gap_symmetry_and_compact_numbers) ... ok
+test_clock_does_not_overlap_title (test_firmware.FirmwareTests.test_clock_does_not_overlap_title) ... ok
+test_clock_format_and_unset (test_firmware.FirmwareTests.test_clock_format_and_unset) ... ok
+test_cs_released_on_write_error (test_firmware.FirmwareTests.test_cs_released_on_write_error) ... ok
+test_demo_cycle_and_boundaries (test_firmware.FirmwareTests.test_demo_cycle_and_boundaries) ... ok
+test_face_and_reason_reflect_environment (test_firmware.FirmwareTests.test_face_and_reason_reflect_environment) ... ok
+test_footer_shows_firmware_version_instead_of_counter (test_firmware.FirmwareTests.test_footer_shows_firmware_version_instead_of_counter) ... ok
+test_network_captions_fit_and_clock_hidden_until_sync (test_firmware.FirmwareTests.test_network_captions_fit_and_clock_hidden_until_sync) ... ok
+test_retro_measurement_and_number_limits (test_firmware.FirmwareTests.test_retro_measurement_and_number_limits) ... ok
+test_window_and_frame_transfer (test_firmware.FirmwareTests.test_window_and_frame_transfer) ... ok
+test_wire_color_bytes (test_firmware.FirmwareTests.test_wire_color_bytes) ... ok
+test_all_menu_buttons_navigate (test_landscape.LandscapeTests.test_all_menu_buttons_navigate) ... ok
+test_all_screens_and_states_fit (test_landscape.LandscapeTests.test_all_screens_and_states_fit) ... ok
+test_environment_boundaries_and_missing (test_landscape.LandscapeTests.test_environment_boundaries_and_missing) ... ok
+test_preserved_modules_and_configuration (test_landscape.LandscapeTests.test_preserved_modules_and_configuration) ... ok
+test_real_touch_adapter_navigates_and_calibrates_without_rewriting_saved_matrix (test_landscape.LandscapeTests.test_real_touch_adapter_navigates_and_calibrates_without_rewriting_saved_matrix) ... ok
+test_render_key_handles_unknown_and_threshold_crossing (test_landscape.LandscapeTests.test_render_key_handles_unknown_and_threshold_crossing) ... ok
+test_rotated_existing_calibration_and_boundaries (test_landscape.LandscapeTests.test_rotated_existing_calibration_and_boundaries) ... ok
+test_setup_confirmation_and_updates_fit_existing_geometry (test_landscape.LandscapeTests.test_setup_confirmation_and_updates_fit_existing_geometry) ... ok
+test_deadline_across_ticks_wrap (test_local_api.APITests.test_deadline_across_ticks_wrap) ... ok
+test_fragmented_request_short_writes_and_limits (test_local_api.APITests.test_fragmented_request_short_writes_and_limits) ... ok
+test_header_limit_and_two_clients (test_local_api.APITests.test_header_limit_and_two_clients) ... ok
+test_rebind_and_bind_failure_cleanup (test_local_api.APITests.test_rebind_and_bind_failure_cleanup) ... ok
+test_repeated_client_cycles (test_local_api.APITests.test_repeated_client_cycles) ... ok
+test_slow_client_deadline_and_busy (test_local_api.APITests.test_slow_client_deadline_and_busy) ... ok
+test_snapshot_preserves_capture_time_and_does_not_read_source (test_local_api.APITests.test_snapshot_preserves_capture_time_and_does_not_read_source) ... ok
+test_unknown_path_and_method (test_local_api.APITests.test_unknown_path_and_method) ... ok
+test_ap_requires_verified_wpa2_and_rotates_key (test_provisioning.APProtectionTests.test_ap_requires_verified_wpa2_and_rotates_key) ... ok
+test_setup_server_fragmentation_auth_no_secret_and_cleanup (test_provisioning.APProtectionTests.test_setup_server_fragmentation_auth_no_secret_and_cleanup) ... ok
+test_absent_legacy_wifi_file_enters_setup (test_provisioning.LegacyConfigOptionalTests.test_absent_legacy_wifi_file_enters_setup) ... ok
+test_atomic_store_and_validation (test_provisioning.ProvisioningTests.test_atomic_store_and_validation) ... ok
+test_failure_timeout_expiry_and_scan (test_provisioning.ProvisioningTests.test_failure_timeout_expiry_and_scan) ... ok
+test_only_save_after_connected_idempotency_and_finish (test_provisioning.ProvisioningTests.test_only_save_after_connected_idempotency_and_finish) ... ok
+test_parser_limits_auth_and_fragmented_body (test_provisioning.ProvisioningTests.test_parser_limits_auth_and_fragmented_body) ... ok
+test_store_failure_preserves_existing (test_provisioning.ProvisioningTests.test_store_failure_preserves_existing) ... ok
+test_forced_refresh_rescans_after_five_seconds (test_provisioning.ShortSetupTests.test_forced_refresh_rescans_after_five_seconds) ... ok
+test_refresh_post_requires_auth_and_json (test_provisioning.ShortSetupTests.test_refresh_post_requires_auth_and_json) ... ok
+test_setup_only_accepts_clients_on_temporary_network_without_code (test_provisioning.ShortSetupTests.test_setup_only_accepts_clients_on_temporary_network_without_code) ... ok
+test_success_closes_after_ten_seconds (test_provisioning.ShortSetupTests.test_success_closes_after_ten_seconds) ... ok
+test_api_freshness_is_measured_and_web_accepts_null (test_real_data.RealDataTests.test_api_freshness_is_measured_and_web_accepts_null) ... ok
+test_screen_shows_missing_real_and_history_gaps (test_real_data.RealDataTests.test_screen_shows_missing_real_and_history_gaps) ... ok
+test_cancel_then_confirm_and_skip (test_setup_controls.MainSetupControlTests.test_cancel_then_confirm_and_skip) ... ok
+test_saved_network_ignores_legacy_force_flag (test_setup_controls.MainSetupControlTests.test_saved_network_ignores_legacy_force_flag) ... ok
+test_cannot_erase_existing_json_if_legacy_write_fails (test_setup_controls.SetupControlTests.test_cannot_erase_existing_json_if_legacy_write_fails) ... ok
+test_confirmed_clear_removes_json_and_legacy_secrets (test_setup_controls.SetupControlTests.test_confirmed_clear_removes_json_and_legacy_secrets) ... ok
+test_credentials_bypass_setup_even_when_old_debug_flag_true (test_setup_controls.SetupControlTests.test_credentials_bypass_setup_even_when_old_debug_flag_true) ... ok
+test_navigation_asks_before_reset_and_cancel_is_inert (test_setup_controls.SetupControlTests.test_navigation_asks_before_reset_and_cancel_is_inert) ... ok
+test_reset_discards_runtime_skip (test_setup_controls.SetupControlTests.test_reset_discards_runtime_skip) ... ok
+test_skip_closes_without_writing_storage (test_setup_controls.SetupControlTests.test_skip_closes_without_writing_storage) ... ok
+test_affine_swapped_and_inverted_axes (test_touch.TouchTests.test_affine_swapped_and_inverted_axes) ... ok
+test_all_menu_and_calibration_screens_fit (test_touch.TouchTests.test_all_menu_and_calibration_screens_fit) ... ok
+test_calibration_requires_fourth_check_then_menu_navigation (test_touch.TouchTests.test_calibration_requires_fourth_check_then_menu_navigation) ... ok
+test_calibration_save_load_and_invalid_file (test_touch.TouchTests.test_calibration_save_load_and_invalid_file) ... ok
+test_tap_once_on_release_not_hold_and_bounce (test_touch.TouchTests.test_tap_once_on_release_not_hold_and_bounce) ... ok
+test_touch_bus_and_cs_restored_after_error (test_touch.TouchTests.test_touch_bus_and_cs_restored_after_error) ... ok
+test_history_bounded_chronological_and_real_time (test_v06.V06Tests.test_history_bounded_chronological_and_real_time) ... ok
+test_main_loop_offline_collects_and_draws_all_new_pages (test_v06.V06Tests.test_main_loop_offline_collects_and_draws_all_new_pages) ... ok
+test_navigation_settings_save_and_trends (test_v06.V06Tests.test_navigation_settings_save_and_trends) ... ok
+test_settings_reload_corruption_and_failed_save (test_v06.V06Tests.test_settings_reload_corruption_and_failed_save) ... ok
+test_settings_replace_existing_file_and_rename_failure (test_v06.V06Tests.test_settings_replace_existing_file_and_rename_failure) ... ok
+test_settings_screen_and_runtime_timezone (test_v06.V06Tests.test_settings_screen_and_runtime_timezone) ... ok
+test_trend_empty_single_flat_and_variable_fit (test_v06.V06Tests.test_trend_empty_single_flat_and_variable_fit) ... ok
+test_calibration_status_load_save_and_failed_write (test_v07.V07Tests.test_calibration_status_load_save_and_failed_write) ... ok
+test_diagnostics_counts_only_events_that_change_image (test_v07.V07Tests.test_diagnostics_counts_only_events_that_change_image) ... ok
+test_diagnostics_measure_elapsed_event_to_frame_and_wrap (test_v07.V07Tests.test_diagnostics_measure_elapsed_event_to_frame_and_wrap) ... ok
+test_disabled_touch_is_visible_on_home_without_menu_access (test_v07.V07Tests.test_disabled_touch_is_visible_on_home_without_menu_access) ... ok
+test_home_updates_only_visible_changes_and_defers_during_touch (test_v07.V07Tests.test_home_updates_only_visible_changes_and_defers_during_touch) ... ok
+test_main_defers_network_during_release_debounce (test_v07.V07Tests.test_main_defers_network_during_release_debounce) ... ok
+test_main_keeps_static_menu_one_frame_while_history_grows (test_v07.V07Tests.test_main_keeps_static_menu_one_frame_while_history_grows) ... ok
+test_settings_no_change_and_failed_save_visible (test_v07.V07Tests.test_settings_no_change_and_failed_save_visible) ... ok
+test_static_menu_does_not_redraw_for_new_samples_or_clock (test_v07.V07Tests.test_static_menu_does_not_redraw_for_new_samples_or_clock) ... ok
+test_status_labels_fit_and_unsaved_warning_drawn_on_home (test_v07.V07Tests.test_status_labels_fit_and_unsaved_warning_drawn_on_home) ... ok
+test_touch_busy_includes_release_debounce (test_v07.V07Tests.test_touch_busy_includes_release_debounce) ... ok
+test_trends_update_when_history_changes (test_v07.V07Tests.test_trends_update_when_history_changes) ... ok
+test_api_routes_use_last_sample_and_manual_clock_before_next_sample (test_v08_integration.IntegrationTests.test_api_routes_use_last_sample_and_manual_clock_before_next_sample) ... ok
+test_first_boot_api_available_while_setup_ap_still_active (test_v08_integration.IntegrationTests.test_first_boot_api_available_while_setup_ap_still_active) ... ok
+test_render_error_closes_api_and_display (test_v08_integration.IntegrationTests.test_render_error_closes_api_and_display) ... ok
+test_complete_page_fits_existing_socket_deadline (test_web_page.WebTests.test_complete_page_fits_existing_socket_deadline) ... ok
+test_offline_fallback_accessibility_and_size (test_web_page.WebTests.test_offline_fallback_accessibility_and_size) ... ok
+test_untrusted_snapshot_is_escaped (test_web_page.WebTests.test_untrusted_snapshot_is_escaped) ... ok
+
+----------------------------------------------------------------------
+Ran 101 tests in 0.099s
+
+OK
+Nombre local no disponible; usar direccion IP.
+NTP no disponible; nuevo intento en 60 s.
+Hora sincronizada por NTP (RTC en UTC).
+Nombre local no disponible; usar direccion IP.
+Conectando Wi-Fi...
+Wi-Fi no conectado; nuevo intento en 30 s. Estado: -3
+NTP no disponible; nuevo intento en 60 s.
+NTP no disponible; nuevo intento en 60 s.
+Hora sincronizada por NTP (RTC en UTC).
+Nombre local no disponible; usar direccion IP.
+Conectando Wi-Fi...
+Wi-Fi no conectado; nuevo intento en 30 s. Estado: 1
+Conectando Wi-Fi...
+Nombre local no disponible; usar direccion IP.
+Conectando Wi-Fi...
+Wi-Fi no conectado; nuevo intento en 30 s. Estado: 1
+Conectando Wi-Fi...
+Wi-Fi conectado. IP: 192.0.2.1
+Hora sincronizada por NTP (RTC en UTC).
+Hora sincronizada por NTP (RTC en UTC).
+Nombre local no disponible; usar direccion IP.
+Wi-Fi sin configurar: edita wifi_config.py
+Calibracion activa, pero no se pudo guardar en flash.
+Nombre local no disponible; usar direccion IP.
+Wi-Fi sin configurar: edita wifi_config.py
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+Nombre local no disponible; usar direccion IP.
+Nombre local no disponible; usar direccion IP.
+Wi-Fi sin configurar: edita wifi_config.py
+Nombre local no disponible; usar direccion IP.
+Wi-Fi sin configurar: edita wifi_config.py
+Nombre local no disponible; usar direccion IP.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+Conectando Wi-Fi...
+Wi-Fi no conectado; nuevo intento en 30 s. Estado: 1
+AURA detenida.
+Calibracion activa, pero no se pudo guardar en flash.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+PERF t=0s frames=4 dibujo_media/max_ms=0.00/0.00
+PERF eventos=4 respuestas=4 evento_a_imagen_max_ms=0 sondeo_max_ms=20 red_max_ms=0 libre=8000000
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: loaded
+AURA detenida.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: disabled
+AURA detenida.
+AURA v0.11.0 / Ctrl+C para detener
+Tactil: disabled

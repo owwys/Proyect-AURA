@@ -1,0 +1,701 @@
+--- v0.10.1/bme280_float.py
++++ v0.11.0/bme280_float.py
+@@ -0,0 +1,264 @@
++# Updated 2018 and 2020
++# This module is based on the below cited resources, which are all
++# based on the documentation as provided in the Bosch Data Sheet and
++# the sample implementation provided therein.
++#
++# Final Document: BST-BME280-DS002-15
++#
++# Authors: Paul Cunnane 2016, Peter Dahlebrg 2016
++#
++# This module borrows from the Adafruit BME280 Python library. Original
++# Copyright notices are reproduced below.
++#
++# Those libraries were written for the Raspberry Pi. This modification is
++# intended for the MicroPython and esp8266 boards.
++#
++# Copyright (c) 2014 Adafruit Industries
++# Author: Tony DiCola
++#
++# Based on the BMP280 driver with BME280 changes provided by
++# David J Taylor, Edinburgh (www.satsignal.eu)
++#
++# Based on Adafruit_I2C.py created by Kevin Townsend.
++#
++# Permission is hereby granted, free of charge, to any person obtaining a copy
++# of this software and associated documentation files (the "Software"), to deal
++# in the Software without restriction, including without limitation the rights
++# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++# copies of the Software, and to permit persons to whom the Software is
++# furnished to do so, subject to the following conditions:
++#
++# The above copyright notice and this permission notice shall be included in
++# all copies or substantial portions of the Software.
++#
++# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++# THE SOFTWARE.
++#
++
++import time
++from micropython import const
++from ustruct import unpack, unpack_from
++from array import array
++
++# BME280 default address.
++BME280_I2CADDR = 0x76
++
++# Operating Modes
++BME280_OSAMPLE_1 = 1
++BME280_OSAMPLE_2 = 2
++BME280_OSAMPLE_4 = 3
++BME280_OSAMPLE_8 = 4
++BME280_OSAMPLE_16 = 5
++
++BME280_REGISTER_CONTROL_HUM = 0xF2
++BME280_REGISTER_STATUS = 0xF3
++BME280_REGISTER_CONTROL = 0xF4
++
++MODE_SLEEP = const(0)
++MODE_FORCED = const(1)
++MODE_NORMAL = const(3)
++
++BME280_TIMEOUT = const(100)  # about 1 second timeout
++
++class BME280:
++
++    def __init__(self,
++                 mode=BME280_OSAMPLE_8,
++                 address=BME280_I2CADDR,
++                 i2c=None,
++                 **kwargs):
++        # Check that mode is valid.
++        if type(mode) is tuple and len(mode) == 3:
++            self._mode_hum, self._mode_temp, self._mode_press = mode
++        elif type(mode) == int:
++            self._mode_hum, self._mode_temp, self._mode_press = mode, mode, mode
++        else:
++            raise ValueError("Wrong type for the mode parameter, must be int or a 3 element tuple")
++
++        for mode in (self._mode_hum, self._mode_temp, self._mode_press):
++            if mode not in [BME280_OSAMPLE_1, BME280_OSAMPLE_2, BME280_OSAMPLE_4,
++                            BME280_OSAMPLE_8, BME280_OSAMPLE_16]:
++                raise ValueError(
++                    'Unexpected mode value {0}. Set mode to one of '
++                    'BME280_OSAMPLE_1, BME280_OSAMPLE_2, BME280_OSAMPLE_4, '
++                    'BME280_OSAMPLE_8 or BME280_OSAMPLE_16'.format(mode))
++
++        self.address = address
++        if i2c is None:
++            raise ValueError('An I2C object is required.')
++        self.i2c = i2c
++        self.__sealevel = 101325
++
++        # load calibration data
++        dig_88_a1 = self.i2c.readfrom_mem(self.address, 0x88, 26)
++        dig_e1_e7 = self.i2c.readfrom_mem(self.address, 0xE1, 7)
++
++        self.dig_T1, self.dig_T2, self.dig_T3, self.dig_P1, \
++            self.dig_P2, self.dig_P3, self.dig_P4, self.dig_P5, \
++            self.dig_P6, self.dig_P7, self.dig_P8, self.dig_P9, \
++            _, self.dig_H1 = unpack("<HhhHhhhhhhhhBB", dig_88_a1)
++
++        self.dig_H2, self.dig_H3, self.dig_H4,\
++            self.dig_H5, self.dig_H6 = unpack("<hBbhb", dig_e1_e7)
++        # unfold H4, H5, keeping care of a potential sign
++        self.dig_H4 = (self.dig_H4 * 16) + (self.dig_H5 & 0xF)
++        self.dig_H5 //= 16
++
++        # temporary data holders which stay allocated
++        self._l1_barray = bytearray(1)
++        self._l8_barray = bytearray(8)
++        self._l3_resultarray = array("i", [0, 0, 0])
++
++        self._l1_barray[0] = self._mode_temp << 5 | self._mode_press << 2 | MODE_SLEEP
++        self.i2c.writeto_mem(self.address, BME280_REGISTER_CONTROL,
++                             self._l1_barray)
++        self.t_fine = 0
++
++    def read_raw_data(self, result):
++        """ Reads the raw (uncompensated) data from the sensor.
++
++            Args:
++                result: array of length 3 or alike where the result will be
++                stored, in temperature, pressure, humidity order
++            Returns:
++                None
++        """
++
++        self._l1_barray[0] = self._mode_hum
++        self.i2c.writeto_mem(self.address, BME280_REGISTER_CONTROL_HUM,
++                             self._l1_barray)
++        self._l1_barray[0] = self._mode_temp << 5 | self._mode_press << 2 | MODE_FORCED
++        self.i2c.writeto_mem(self.address, BME280_REGISTER_CONTROL,
++                             self._l1_barray)
++
++        # wait up to about 5 ms for the conversion to start
++        for _ in range(5):
++            if self.i2c.readfrom_mem(self.address, BME280_REGISTER_STATUS, 1)[0] & 0x08:
++                break;  # The conversion is started.
++            time.sleep_ms(1)  # still not busy
++        # Wait for conversion to complete
++        for _ in range(BME280_TIMEOUT):
++            if self.i2c.readfrom_mem(self.address, BME280_REGISTER_STATUS, 1)[0] & 0x08:
++                time.sleep_ms(10)  # still busy
++            else:
++                break  # Sensor ready
++        else:
++            raise RuntimeError("Sensor BME280 not ready")
++
++        # burst readout from 0xF7 to 0xFE, recommended by datasheet
++        self.i2c.readfrom_mem_into(self.address, 0xF7, self._l8_barray)
++        readout = self._l8_barray
++        # pressure(0xF7): ((msb << 16) | (lsb << 8) | xlsb) >> 4
++        raw_press = ((readout[0] << 16) | (readout[1] << 8) | readout[2]) >> 4
++        # temperature(0xFA): ((msb << 16) | (lsb << 8) | xlsb) >> 4
++        raw_temp = ((readout[3] << 16) | (readout[4] << 8) | readout[5]) >> 4
++        # humidity(0xFD): (msb << 8) | lsb
++        raw_hum = (readout[6] << 8) | readout[7]
++
++        result[0] = raw_temp
++        result[1] = raw_press
++        result[2] = raw_hum
++
++    def read_compensated_data(self, result=None):
++        """ Reads the data from the sensor and returns the compensated data.
++
++            Args:
++                result: array of length 3 or alike where the result will be
++                stored, in temperature, pressure, humidity order. You may use
++                this to read out the sensor without allocating heap memory
++
++            Returns:
++                array with temperature, pressure, humidity. Will be the one
++                from the result parameter if not None
++        """
++        self.read_raw_data(self._l3_resultarray)
++        raw_temp, raw_press, raw_hum = self._l3_resultarray
++        # temperature
++        var1 = (raw_temp/16384.0 - self.dig_T1/1024.0) * self.dig_T2
++        var2 = raw_temp/131072.0 - self.dig_T1/8192.0
++        var2 = var2 * var2 * self.dig_T3
++        self.t_fine = int(var1 + var2)
++        temp = (var1 + var2) / 5120.0
++        # AURA: reject out-of-range values in sensor_source, do not clamp.
++
++        # pressure
++        var1 = (self.t_fine/2.0) - 64000.0
++        var2 = var1 * var1 * self.dig_P6 / 32768.0 + var1 * self.dig_P5 * 2.0
++        var2 = (var2 / 4.0) + (self.dig_P4 * 65536.0)
++        var1 = (self.dig_P3 * var1 * var1 / 524288.0 + self.dig_P2 * var1) / 524288.0
++        var1 = (1.0 + var1 / 32768.0) * self.dig_P1
++        if (var1 == 0.0):
++            raise ValueError('BME280 invalid pressure calibration')
++        else:
++            p = ((1048576.0 - raw_press) - (var2 / 4096.0)) * 6250.0 / var1
++            var1 = self.dig_P9 * p * p / 2147483648.0
++            var2 = p * self.dig_P8 / 32768.0
++            pressure = p + (var1 + var2 + self.dig_P7) / 16.0
++            # AURA: reject out-of-range values in sensor_source, do not clamp.
++
++        # humidity
++        h = (self.t_fine - 76800.0)
++        h = ((raw_hum - (self.dig_H4 * 64.0 + self.dig_H5 / 16384.0 * h)) *
++             (self.dig_H2 / 65536.0 * (1.0 + self.dig_H6 / 67108864.0 * h *
++                                       (1.0 + self.dig_H3 / 67108864.0 * h))))
++        humidity = h * (1.0 - self.dig_H1 * h / 524288.0)
++        if (humidity < 0):
++            humidity = 0
++        if (humidity > 100):
++            humidity = 100.0
++
++        if result:
++            result[0] = temp
++            result[1] = pressure
++            result[2] = humidity
++            return result
++
++        return array("f", (temp, pressure, humidity))
++
++    @property
++    def sealevel(self):
++        return self.__sealevel
++
++    @sealevel.setter
++    def sealevel(self, value):
++        if 30000 < value < 120000:  # just ensure some reasonable value
++            self.__sealevel = value
++
++    @property
++    def altitude(self):
++        '''
++        Altitude in m.
++        '''
++        from math import pow
++        try:
++            p = 44330 * (1.0 - pow(self.read_compensated_data()[1] /
++                                   self.__sealevel, 0.1903))
++        except:
++            p = 0.0
++        return p
++
++    @property
++    def dew_point(self):
++        """
++        Compute the dew point temperature for the current Temperature
++        and Humidity measured pair
++        """
++        from math import log
++        t, p, h = self.read_compensated_data()
++        h = (log(h, 10) - 2) / 0.4343 + (17.62 * t) / (243.12 + t)
++        return 243.12 * h / (17.62 - h)
++
++    @property
++    def values(self):
++        """ human readable values """
++
++        t, p, h = self.read_compensated_data()
++
++        return ("{:.2f}C".format(t), "{:.2f}hPa".format(p/100),
++                "{:.2f}%".format(h))
++
+--- v0.10.1/bme280_periodic.py
++++ v0.11.0/bme280_periodic.py
+@@ -0,0 +1,65 @@
++"""Nonblocking forced conversions using bme280_float compensation.
++
++Only the raw read is overridden; no sleep or conversion loop is called.
++"""
++import time
++from bme280_float import BME280
++
++
++class BufferedBME280(BME280):
++    def read_raw_data(self, result):
++        raw = self._l8_barray
++        self.i2c.readfrom_mem_into(self.address, 0xf7, raw)
++        pressure = ((raw[0] << 16) | (raw[1] << 8) | raw[2]) >> 4
++        temperature = ((raw[3] << 16) | (raw[4] << 8) | raw[5]) >> 4
++        humidity = (raw[6] << 8) | raw[7]
++        if pressure == 0x80000 or temperature == 0x80000 or humidity == 0x8000:
++            raise ValueError('BME280 skipped measurement')
++        result[0], result[1], result[2] = temperature, pressure, humidity
++
++
++class PeriodicBME280:
++    def __init__(self, i2c):
++        self.i2c = i2c
++        self.driver = None
++        self.state = 'identify'
++        self.due = None
++
++    def poll(self, now):
++        if self.due is not None and time.ticks_diff(now, self.due) < 0:
++            return None
++        if self.state == 'identify':
++            if self.i2c.readfrom_mem(0x76, 0xd0, 1) != b'\x60':
++                raise ValueError('BME280 chip ID')
++            self.state, delay = 'calibration_wait', 10
++        elif self.state == 'calibration_wait':
++            # NVM copy must finish before reading calibration coefficients.
++            if self.i2c.readfrom_mem(0x76, 0xf3, 1)[0] & 1:
++                raise ValueError('BME280 NVM busy')
++            self.state, delay = 'init', 0
++        elif self.state == 'init':
++            self.driver = BufferedBME280(i2c=self.i2c, address=0x76, mode=1)
++            if not self.driver.dig_T1 or not self.driver.dig_P1:
++                raise ValueError('BME280 calibration')
++            self.state, delay = 'humidity', 0
++        elif self.state == 'humidity':
++            self.i2c.writeto_mem(0x76, 0xf2, b'\x01')
++            self.state, delay = 'trigger', 0
++        elif self.state == 'trigger':
++            self.i2c.writeto_mem(0x76, 0xf4, b'\x25')
++            self.state, delay = 'status', 20  # x1 T/P/H: <10 ms conversion
++            self.started = now
++        elif self.state == 'status':
++            if self.i2c.readfrom_mem(0x76, 0xf3, 1)[0] & 8:
++                if time.ticks_diff(now, self.started) >= 200:
++                    raise ValueError('BME280 conversion timeout')
++                delay = 10
++            else:
++                self.state, delay = 'read', 0
++        else:
++            t, p, h = self.driver.read_compensated_data()
++            self.state = 'humidity'
++            self.due = time.ticks_add(now, 2000)
++            return {'temperature': t, 'pressure': p/100, 'humidity': h}
++        self.due = time.ticks_add(now, delay)
++        return None
+--- v0.10.1/firmware_version.py
++++ v0.11.0/firmware_version.py
+@@ -1 +1 @@
+-VERSION = 'v0.10.1'
++VERSION = 'v0.11.0'
+--- v0.10.1/local_api.py
++++ v0.11.0/local_api.py
+@@ -10,10 +10,20 @@
+ 
+ 
+ def make_snapshot(data, captured_uptime_ms, captured_utc, uptime_ms, clock_state, wifi_connected):
++    age = max(0,uptime_ms-captured_uptime_ms)
++    if 'field_age_ms' in data:
++        ages = [a for a in data['field_age_ms'].values() if a is not None]
++        age = max(ages) if ages else None
++        captured_uptime_ms = max(0,uptime_ms-age) if age is not None else None
++        # Independent conversions do not share an exact UTC capture instant.
++        captured_utc = None
+     return {'measurements': {'co2_ppm':data['co2'], 'temperature_c':data['temperature'],
+             'humidity_pct':data['humidity'], 'pressure_hpa':data['pressure'],
+             'demo':bool(data.get('demo',True)), 'sample_uptime_ms':captured_uptime_ms,
+-            'age_ms':max(0,uptime_ms-captured_uptime_ms), 'sample_utc':captured_utc},
++            'age_ms':age, 'sample_utc':captured_utc,
++            'sources':dict(data.get('sources',{})),
++            'field_age_ms':dict(data.get('field_age_ms',{})),
++            'sensors':data.get('sensors',{})},
+             'status': {'firmware':config.FIRMWARE_VERSION, 'uptime_ms':uptime_ms,
+             'demo':bool(data.get('demo',True)), 'wifi_connected':bool(wifi_connected),
+             'api':{'state':'waiting','url':None}, 'clock':dict(clock_state)}}
+--- v0.10.1/main.py
++++ v0.11.0/main.py
+@@ -7,7 +7,7 @@
+ from firmware_version import VERSION
+ config.FIRMWARE_VERSION = VERSION  # Solo RAM; config.py y sus pines no se sobrescriben.
+ from ili9341 import Display
+-from demo import DemoSource
++from sensor_source import SensorSource
+ from ui import Dashboard, clock_text
+ from touch import Touch
+ from menu import Navigation
+@@ -38,8 +38,8 @@
+         dashboard = Dashboard(display)
+         touch = Touch(display) if config.TOUCH_ENABLED else None
+         navigation = Navigation(touch, settings, clock)
+-        source = DemoSource()
+-        data = source.read()
++        source = SensorSource()
++        data = source.snapshot(time.ticks_ms())
+         history.add(0, data)
+         captured_uptime_ms = 0
+         captured_utc = clock.snapshot()['utc']
+@@ -53,12 +53,12 @@
+         def connected():
+             return bool(link.enabled and link.wlan.isconnected())
+         def public_snapshot():
+-            return make_snapshot(data, captured_uptime_ms, captured_utc, elapsed_ms,
++            return make_snapshot(source.snapshot(time.ticks_ms()), captured_uptime_ms, captured_utc, elapsed_ms,
+                                  clock.snapshot(), connected())
+         api = LocalAPI(public_snapshot, enabled=config.API_ENABLED, port=config.API_PORT)
+         gate = FrameGate()
+         previous = time.ticks_ms()
+-        last_demo = previous
++        last_sample = previous
+         last_clock = previous
+         last_report = previous
+         hour = '--:--'
+@@ -144,13 +144,15 @@
+                         link.ssid, link.password = WiFiStore().load()
+                         setup = None
+                         gate.previous = None
+-            if time.ticks_diff(now, last_demo) >= config.UPDATE_MS:
+-                data = source.read()
++            if not busy:
++                source.poll(now)
++            data = source.snapshot(now)
++            if time.ticks_diff(now, last_sample) >= config.UPDATE_MS:
+                 captured_uptime_ms = elapsed_ms
+                 captured_utc = clock.snapshot()['utc']
+                 history.add(elapsed_ms//1000, data)
+                 revision += 1
+-                last_demo = now
++                last_sample = now
+             # Leer el reloj una vez por segundo; tambien al sincronizar/cambiar zona.
+             new_clock_state = (clock.ready, clock.source, config.TIMEZONE)
+             if new_clock_state != clock_state or time.ticks_diff(now, last_clock) >= 1000:
+--- v0.10.1/rendering.py
++++ v0.11.0/rendering.py
+@@ -42,7 +42,7 @@
+         return (page, shown('co2', '%d', 0, 99999),
+                 shown('temperature', '%.1f', -40, 85),
+                 shown('humidity', '%d', 0, 100), shown('pressure', '%d', 300, 1200),
+-                assess(data), hour, home_caption(link), state)
++                assess(data), hour, home_caption(link), state, data.get('sensor_caption'))
+     if page == 'trends':
+         return page, nav.metric, revision
+     if page == 'clock':
+--- v0.10.1/scd41.py
++++ v0.11.0/scd41.py
+@@ -0,0 +1,71 @@
++"""SCD4x periodic mode; each poll advances at most one I2C operation.
++
++Sensirion SCD4x datasheet v1.7, sections 3.6, 3.9.2 and 3.12.
++No forced recalibration, EEPROM writes or changes to ASC/offset.
++"""
++import time
++
++
++def crc8(data):
++    crc = 0xff
++    for value in data:
++        crc ^= value
++        for _ in range(8):
++            crc = ((crc << 1) ^ (0x31 if crc & 0x80 else 0)) & 0xff
++    return crc
++
++
++def decode_words(data):
++    if not data or len(data) % 3:
++        raise ValueError('SCD41 length')
++    words = []
++    for i in range(0, len(data), 3):
++        if crc8(data[i:i+2]) != data[i+2]:
++            raise ValueError('SCD41 CRC')
++        words.append((data[i] << 8) | data[i+1])
++    return words
++
++
++class SCD41:
++    def __init__(self, i2c):
++        self.i2c = i2c
++        self.state = 'stop'
++        self.due = None
++
++    def _command(self, value):
++        self.i2c.writeto(0x62, bytes((value >> 8, value & 255)))
++
++    def poll(self, now):
++        if self.due is not None and time.ticks_diff(now, self.due) < 0:
++            return None
++        if self.state == 'stop':
++            self._command(0x3f86)
++            self.state, delay = 'start', 500
++        elif self.state == 'start':
++            self._command(0x21b1)
++            self.state, delay = 'ready_command', 5000
++        elif self.state == 'ready_command':
++            self._command(0xe4b8)
++            self.state, delay = 'ready_read', 1
++        elif self.state == 'ready_read':
++            raw = self.i2c.readfrom(0x62, 3)
++            if len(raw) != 3:
++                raise ValueError('SCD41 length')
++            ready = decode_words(raw)[0] & 0x7ff
++            self.state, delay = ('measure_command', 0) if ready else ('ready_command', 1000)
++        elif self.state == 'measure_command':
++            self._command(0xec05)
++            self.state, delay = 'measure_read', 1
++        else:
++            raw = self.i2c.readfrom(0x62, 9)
++            if len(raw) != 9:
++                raise ValueError('SCD41 length')
++            co2, temperature, humidity = decode_words(raw)
++            if co2 == 0:
++                raise ValueError('SCD41 invalid CO2')
++            self.state = 'ready_command'
++            self.due = time.ticks_add(now, 5000)
++            return {'co2': co2, 'temperature': -45+175*temperature/65535,
++                    'humidity': 100*humidity/65535}
++        self.due = time.ticks_add(now, delay)
++        return None
+--- v0.10.1/sensor_source.py
++++ v0.11.0/sensor_source.py
+@@ -0,0 +1,87 @@
++"""Local sensors, independent retry and per-field freshness; never demo data."""
++import time
++from scd41 import SCD41
++from bme280_periodic import PeriodicBME280
++
++METRICS = ('co2', 'temperature', 'humidity', 'pressure')
++LIMITS = {'co2': (1, 65535), 'temperature': (-40, 85),
++          'humidity': (0, 100), 'pressure': (300, 1100)}
++
++
++def create_i2c():
++    from machine import SoftI2C, Pin
++    # SoftI2C has an explicit clock stretching timeout in microseconds.
++    return SoftI2C(sda=Pin(8), scl=Pin(9), freq=100000, timeout=2000)
++
++
++class SensorSource:
++    def __init__(self, bus_factory=create_i2c):
++        self.bus_factory = bus_factory
++        self.bus = None
++        self.bus_due = None
++        self.turn = 0
++        self.factories = {'scd41': SCD41, 'bme280': PeriodicBME280}
++        self.slots = {name: {'driver': None, 'due': None, 'sample': None,
++                            'at': None, 'error': None} for name in self.factories}
++
++    def poll(self, now):
++        if self.bus is None:
++            if self.bus_due is not None and time.ticks_diff(now, self.bus_due) < 0:
++                return
++            try:
++                self.bus = self.bus_factory()
++            except (OSError, ValueError, RuntimeError) as error:
++                self.bus_due = time.ticks_add(now, 10000)
++                for slot in self.slots.values(): slot['error'] = type(error).__name__
++            return
++        name = ('scd41', 'bme280')[self.turn]
++        self.turn = 1-self.turn
++        slot = self.slots[name]
++        if slot['due'] is not None and time.ticks_diff(now, slot['due']) < 0:
++            return
++        try:
++            if slot['driver'] is None:
++                slot['driver'] = self.factories[name](self.bus)
++                slot['started'] = now
++            sample = slot['driver'].poll(now)
++            if sample is not None:
++                for key, value in sample.items():
++                    low, high = LIMITS[key]
++                    if type(value) not in (int, float) or not low <= value <= high:
++                        raise ValueError('Invalid '+key)
++                slot.update(sample=sample, at=now, error=None)
++            else:
++                reference = slot['at']
++                if reference is None or time.ticks_diff(slot['started'], reference) > 0:
++                    reference = slot['started']
++                if time.ticks_diff(now, reference) > 20000:
++                    raise ValueError('Sensor sample timeout')
++        except (OSError, ValueError, RuntimeError) as error:
++            # Drop current sample immediately; keep last-good only for diagnostics.
++            slot['driver'] = None
++            slot['error'] = type(error).__name__ + ': ' + str(error)
++            slot['due'] = time.ticks_add(now, 10000)
++
++    def snapshot(self, now):
++        data = {key: None for key in METRICS}
++        data.update(demo=False, sources={}, field_age_ms={}, sensors={})
++        available = {}
++        for name, slot in self.slots.items():
++            age = None if slot['at'] is None else max(0, time.ticks_diff(now, slot['at']))
++            state = ('error' if slot['error'] else 'warming' if age is None else
++                     'stale' if age > 15000 else 'ok')
++            available[name] = state == 'ok'
++            data['sensors'][name] = {'state': state, 'age_ms': age, 'error': slot['error']}
++        for key in METRICS:
++            candidates = ('scd41',) if key == 'co2' else ('bme280',) if key == 'pressure' else ('bme280', 'scd41')
++            for name in candidates:
++                if available[name]:
++                    data[key] = self.slots[name]['sample'][key]
++                    data['sources'][key] = name
++                    data['field_age_ms'][key] = data['sensors'][name]['age_ms']
++                    break
++            else:
++                data['sources'][key] = None
++                data['field_age_ms'][key] = None
++        data['sensor_caption'] = ('SENSORES OK' if all(available.values()) else 'SENSORES: REVISAR')
++        return data
+--- v0.10.1/ui.py
++++ v0.11.0/ui.py
+@@ -52,7 +52,7 @@
+         self.fb.fill(BG)
+         self._text(title,8,12,ACCENT)
+ 
+-    def _footer(self, text='DEMO / LOCAL'):
++    def _footer(self, text='AURA / LOCAL'):
+         self._text(text,8,230,MUTED,chars=30)
+         version = FIRMWARE_VERSION[:8]
+         self._text(version,312-self.g.measure(version),230,MUTED,chars=8)
+@@ -112,7 +112,7 @@
+         elif status.startswith('WIFI OFF'):status='WIFI OFF'
+         if calibration in ('pending','unsaved','disabled'):
+             status={'pending':'TACTIL PENDIENTE','unsaved':'TACTIL SIN GUARDAR','disabled':'TACTIL DESACTIVADO'}[calibration]
+-        self._footer('DEMO / '+status)
++        self._footer(('DEMO' if data.get('demo',False) else data.get('sensor_caption','REAL'))+' / '+status)
+         self.display.show()
+ 
+     def draw_menu(self,page,link,calibration='loaded',clock=None,api_state=None):
+@@ -138,7 +138,7 @@
+                         rows.extend([url[i:i+37] for i in range(0,min(len(url),74),37)])
+             else:
+                 rows=['AURA One Indoor','Firmware: '+FIRMWARE_VERSION,'ESP32-S3 / ILI9341',
+-                      'Pantalla: 320x240','Datos: DEMO','Criterios orientativos', 'No es un detector de seguridad']
++                      'Pantalla: 320x240','Datos: SENSORES','Criterios orientativos', 'No es un detector de seguridad']
+             for i,row in enumerate(rows[:9]):self._text(row,8,40+i*16)
+             self._button('VOLVER',BACK_BUTTON)
+         self._footer()
+@@ -191,17 +191,21 @@
+     def draw_trends(self,history,metric):
+         from history import METRICS
+         key,label,unit=METRICS[metric]
+-        self._base('TENDENCIAS / DEMO')
++        self._base('TENDENCIAS')
+         self._center(label+' ('+unit+')',30,ACCENT)
+         points=history.series(key)
++        values=[p[1] for p in points if p[1] is not None]
+         f=self.fb
+         f.hline(12,138,296,MUTED);f.fill_rect(12,70,1,69,MUTED)
+-        if not points:self._center('Sin muestras',100,MUTED)
+-        else:
+-            low=min(p[1] for p in points);high=max(p[1] for p in points)
++        if not values:self._center('Sin muestras',100,MUTED)
++        else:
++            low=min(values);high=max(values)
+             self._center('Min %.1f / Max %.1f' % (low,high),48)
+             span=max(1,high-low);duration=max(1,points[-1][0]-points[0][0]);previous=None
+             for seconds,value in points:
++                if value is None:
++                    previous=None
++                    continue
+                 x=16+int((seconds-points[0][0])*288/duration)
+                 y=134-int((value-low)*60/span) if high!=low else 104
+                 if previous is None:f.fill_rect(x-1,y-1,3,3,ACCENT)
+@@ -212,7 +216,7 @@
+             self._center('Ventana: %ds / %d pt' % (points[-1][0]-points[0][0],len(points)),146,MUTED)
+         self._button('< ANTERIOR',(8,160,144,28));self._button('SIGUIENTE >',(160,160,152,28))
+         self._button('VOLVER',BACK_BUTTON)
+-        self._footer('DEMO / TIEMPO RELATIVO');self.display.show()
++        self._footer('LOCAL / TIEMPO RELATIVO');self.display.show()
+ 
+     def draw_clock(self,editor,zone,source):
+         from clock_service import SOURCES
+@@ -229,7 +233,7 @@
+         self._button('INVIERNO' if editor.ambiguous else '+',CLOCK_PLUS)
+         self._center(editor.message[:38],180,YELLOW)
+         self._button('APLICAR',CLOCK_APPLY);self._button('CANCELAR',CLOCK_CANCEL)
+-        self._footer('DEMO / RELOJ LOCAL');self.display.show()
++        self._footer('AURA / RELOJ LOCAL');self.display.show()
+ 
+     def draw_setup(self, status, app_code, wifi_key):
+         # Misma geometria, paleta y tarjetas que la v0.8.1 original.
+--- v0.10.1/web_page.py
++++ v0.11.0/web_page.py
+@@ -10,13 +10,15 @@
+     local = clock.get('local')
+     values = {'co2':data['co2_ppm'], 'temperature':data['temperature_c'],
+               'humidity':data['humidity_pct'], 'pressure':data['pressure_hpa'],
+-              'age':str(round(data['age_ms']/1000,1))+' s',
++              'age':str(round(data['age_ms']/1000,1))+' s' if data['age_ms'] is not None else '--',
+               'clock':local[11:16] if local else '--:--',
+               'date':local[:10] if local else 'Sin ajustar',
+               'zone':clock.get('timezone','UTC'),
+               'source':{'manual':'Ajuste manual','ntp':'Sincronizada por NTP',
+                         'retained':'Hora conservada','unset':'Sin ajustar'}.get(clock.get('source'),'Sin ajustar'),
+               'version':status['firmware'], 'mode':'Datos simulados · DEMO' if data['demo'] else 'Datos del dispositivo'}
++    for key in ('co2','temperature','humidity','pressure'):
++        if values[key] is None: values[key] = '--'
+     page = PAGE
+     # Un solo recorrido: los valores nunca se reinterpretan como marcadores.
+     chunks = page.split('@@')
+@@ -58,10 +60,10 @@
+ const sources={manual:'Ajuste manual',ntp:'Sincronizada por NTP',retained:'Hora conservada',unset:'Sin ajustar'};
+ async function get(path){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),4000);try{const r=await fetch(path,{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('HTTP');return await r.json()}finally{clearTimeout(timeout)}}
+ async function update(){if(busy||document.hidden)return;busy=true;$('refresh').disabled=true;clearTimeout(timer);
+-try{const m=await get('/api/measurements'),s=await get('/api/status');if(!['co2_ppm','temperature_c','humidity_pct','pressure_hpa','age_ms'].every(k=>typeof m[k]==='number'&&Number.isFinite(m[k]))||!s.clock)throw Error('Datos');
+-text('co2',number(m.co2_ppm));text('temperature',number(m.temperature_c));text('humidity',number(m.humidity_pct));text('pressure',number(m.pressure_hpa));
++try{const m=await get('/api/measurements'),s=await get('/api/status');if(!['co2_ppm','temperature_c','humidity_pct','pressure_hpa','age_ms'].every(k=>(m[k]===null||(typeof m[k]==='number'&&Number.isFinite(m[k]))))||!s.clock)throw Error('Datos');
++text('co2',m.co2_ppm===null?'--':number(m.co2_ppm));text('temperature',m.temperature_c===null?'--':number(m.temperature_c));text('humidity',m.humidity_pct===null?'--':number(m.humidity_pct));text('pressure',m.pressure_hpa===null?'--':number(m.pressure_hpa));
+ text('mode',m.demo?'Datos simulados · DEMO':'Datos del dispositivo');const c=s.clock; text('clock',c.local?c.local.slice(11,16):'--:--');text('date',c.local?c.local.slice(0,10):'Sin ajustar');text('zone',c.timezone||'UTC');text('source',sources[c.source]||'Sin ajustar');text('version',s.firmware);
+-received=performance.now();age=Math.max(0,m.age_ms);text('age',number(age/1000)+' s');$('connection').classList.remove('stale');text('connection-text','Conectado a AURA');text('notice','Actualización automática cada 5 s.');
++received=performance.now();age=m.age_ms===null?null:Math.max(0,m.age_ms);text('age',age===null?'--':number(age/1000)+' s');$('connection').classList.remove('stale');text('connection-text','Conectado a AURA');text('notice','Actualización automática cada 5 s.');
+ }catch(e){$('connection').classList.add('stale');text('connection-text','Sin respuesta de AURA');text('notice','No se pudo actualizar. Se conservan los últimos datos; reintentando…');
+ }finally{busy=false;$('refresh').disabled=false;if(!document.hidden)timer=setTimeout(update,5000)}}
+ $('refresh').addEventListener('click',update);document.addEventListener('visibilitychange',()=>{clearTimeout(timer);if(!document.hidden)update()});
